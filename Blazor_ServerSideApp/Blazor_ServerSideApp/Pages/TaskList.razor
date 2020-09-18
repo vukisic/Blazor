@@ -1,0 +1,60 @@
+﻿@page "/tasklist"
+
+
+<h3>@Name's TaskList</h3>
+
+@if(_taskList.Count > 0)
+{
+    <div class="progress my-2">
+        <div class="progress-bar" role="progressbar" style="width: @(_percentDone)%" aria-valuemin="0" aria-valuemax="100">
+            @(_percentDone)%
+        </div>
+    </div>
+}
+
+<EditForm class="form-inline my-2" Model="@_newTask" OnValidSubmit="AddTask">
+    <div class="form-group">
+        <label for="name">Task Name:</label>
+        <InputText class="form-control mx-2" id="name" @bind-Value="_newTask.Task" />
+    </div>
+    <button type="submit" class="btn btn-outline-primary">Add Task</button>
+</EditForm>
+
+<ul class="list-group">
+    @foreach (var item in _taskList)
+    {
+        @if (item.Complete)
+        {
+            <li class="list-group-item list-group-item-secondary my-1"
+                @onclick="(() => item.Complete = !item.Complete)"><del>@item.Task</del></li>
+        }
+        else
+        {
+            <li class="list-group-item list-group-item-success my-1"
+                @onclick="(() => item.Complete = !item.Complete)">@item.Task</li>
+        }
+
+    }
+</ul>
+
+@code {
+    private List<TaskModel> _taskList = new List<TaskModel>();
+    private TaskModel _newTask = new TaskModel();
+
+    private int _percentDone
+    {
+        get
+        {
+            return (_taskList.Count(x => x.Complete) * 100) / _taskList.Count;
+        }
+    }
+
+    [Parameter]
+    public string Name { get; set; }
+
+    private void AddTask()
+    {
+        _taskList.Add(_newTask);
+        _newTask = new TaskModel();
+    }
+}
