@@ -1,6 +1,8 @@
 ﻿@page "/departments"
 @inject HttpClient Http
 @inject BlazorWebAssembly.Services.IDepartmentService DepartmentService
+@inject IToastService ToastService
+
 <h3>Departments</h3>
 
 @if (_departments == null)
@@ -26,13 +28,15 @@ else
                     <td>@department.Name</td>
                     <td>@department.MainLocation</td>
                     <td>
-                        <button class="btn btn-danger" @onclick="() => Delete(department.Id)">Delete</button>
+                        <button class="btn btn-danger my-2" @onclick="() => Delete(department.Id)">Delete</button>
+                        <button class="btn btn-warning my-2" @onclick="() => PrepareEdit(department.Id)">Edit</button>
                     </td>
                 </tr>
             }
         </tbody>
     </table>
     <button class="btn btn-primary" @onclick="() => _addModal.Open()">Add</button>
+    <!-- Add Modal-->
     <Modal @ref="_addModal">
         <Title>Add Department</Title>
         <Body>
@@ -45,11 +49,31 @@ else
                     <label for="name">Main Location:</label>
                     <InputText class="form-control mx-2 " required id="mainLocation" @bind-Value="_newDepartment.MainLocation" />
                 </div>
-                <button type="submit" class="btn btn-primary">Add Task</button>
+                <button type="submit" class="btn btn-primary">Add</button>
             </EditForm>
         </Body>
         <Footer>
             <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="() => _addModal.Close()">Close</button>
+        </Footer>
+    </Modal>
+    <!-- Edit Modal-->
+    <Modal @ref="_editModal">
+        <Title>Edit Department</Title>
+        <Body>
+            <EditForm class="form my-2" Model="@_editDepartment" OnValidSubmit="Edit">
+                <div class="form-group">
+                    <label for="name">Name:</label>
+                    <InputText class="form-control mx-2" required id="name" @bind-Value="_editDepartment.Name" />
+                </div>
+                <div class="form-group">
+                    <label for="name">Main Location:</label>
+                    <InputText class="form-control mx-2 " required id="mainLocation" @bind-Value="_editDepartment.MainLocation" />
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </Body>
+        <Footer>
+            <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="() => _editModal.Close()">Close</button>
         </Footer>
     </Modal>
 
@@ -59,7 +83,9 @@ else
 @code {
     private List<Department> _departments;
     private Department _newDepartment = new Department();
+    private Department _editDepartment = new Department();
     private Modal _addModal { get; set; }
+    private Modal _editModal { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -72,14 +98,20 @@ else
         _departments = await DepartmentService.GetAll();
     }
 
-    private async void Add()
+    private async Task Add()
     {
         var result = await DepartmentService.Add(_newDepartment);
         _newDepartment = new Department();
         if (result)
         {
-            _addModal.Close();
             await Get();
+            _addModal.Close();
+            ToastService.ShowSuccess("Department added!");
+        }
+        else
+        {
+            _addModal.Close();
+            ToastService.ShowError("Department cannot be added!");
         }
 
     }
@@ -91,6 +123,35 @@ else
         {
             _departments = _departments.Where(x => x.Id != id).ToList();
             await Get();
+            ToastService.ShowSuccess("Department deleted!");
+        }
+        else
+        {
+            ToastService.ShowError("Department cannot be deleted!");
+        }
+
+    }
+
+    private void PrepareEdit(long id)
+    {
+        _editDepartment = _departments.Single(x => x.Id == id);
+        _editModal.Open();
+    }
+
+    private async Task Edit()
+    {
+        var result = await DepartmentService.Edit(_editDepartment);
+        _editDepartment = new Department();
+        if (result)
+        {
+            await Get();
+            _editModal.Close();
+            ToastService.ShowSuccess("Success!");
+        }
+        else
+        {
+            _editModal.Close();
+            ToastService.ShowError("Fail to update department!");
         }
 
     }

@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace BlazorWebAssembly.Services
 {
-    public interface IDepartmentService
+    public interface IEmployeeService
     {
-        Task<List<Department>> GetAll();
-        Task<bool> Add(Department model);
+        Task<List<Employee>> GetAll();
+        Task<bool> Add(EmployeeModel model);
         Task<bool> Delete(long id);
-        Task<bool> Edit(Department model);
+        Task<bool> Edit(EmployeeModel model);
     }
 }

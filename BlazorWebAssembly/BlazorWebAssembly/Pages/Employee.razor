@@ -1,0 +1,201 @@
+﻿@page "/employees"
+@inject HttpClient Http
+@inject BlazorWebAssembly.Services.IDepartmentService DepartmentService
+@inject BlazorWebAssembly.Services.IEmployeeService EmployeeService
+@inject IToastService ToastService
+
+<h3>Employees</h3>
+
+@if (_employees == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Email</th>
+                <th>Department</th>
+                <th>Options</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var emp in _employees)
+            {
+                <tr>
+                    <td>@emp.Id</td>
+                    <td>@emp.FirstName</td>
+                    <td>@emp.LastName</td>
+                    <td>@emp.Email</td>
+                    <td>@emp.Department.Name</td>
+                    <td>
+                        <button class="btn btn-danger my-2" @onclick="() => Delete(emp.Id)">Delete</button>
+                        <button class="btn btn-warning my-2" @onclick="() => PrepareEdit(emp.Id)">Edit</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <button class="btn btn-primary" @onclick="() => _addModal.Open()">Add</button>
+    <!-- Add Modal-->
+    <Modal @ref="_editModal">
+        <Title>Edit Department</Title>
+        <Body>
+            <EditForm class="form my-2" Model="@_editEmployee" OnValidSubmit="Edit">
+                <div class="form-group">
+                    <label for="FirstName">First Name:</label>
+                    <InputText class="form-control mx-2" required id="firstName" @bind-Value="_editEmployee.FirstName" />
+                </div>
+                <div class="form-group">
+                    <label for="FastName">Last Name:</label>
+                    <InputText class="form-control mx-2" required id="LastName" @bind-Value="_editEmployee.LastName" />
+                </div>
+                <div class="form-group">
+                    <label for="Email">Email:</label>
+                    <InputText class="form-control mx-2" type="email" required id="Email" @bind-Value="_editEmployee.Email" />
+                </div>
+                <div class="form-group">
+                    <label for="Department">Department:</label>
+                    <select required class="form-control mx-2" id="Department" @bind="_editEmployee.Department">
+                        @foreach (var dep in _departments)
+                        {
+                            <option value="@dep.Name">@dep.Name</option>
+                        }
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </Body>
+        <Footer>
+            <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="() => _editModal.Close()">Close</button>
+        </Footer>
+    </Modal>
+    <!-- Edit Modal-->
+<Modal @ref="_addModal">
+    <Title>Add Department</Title>
+    <Body>
+        <EditForm class="form my-2" Model="@_newEmployee" OnValidSubmit="Add">
+            <div class="form-group">
+                <label for="FirstName">First Name:</label>
+                <InputText class="form-control mx-2" required id="firstName" @bind-Value="_newEmployee.FirstName" />
+            </div>
+            <div class="form-group">
+                <label for="FastName">Last Name:</label>
+                <InputText class="form-control mx-2" required id="LastName" @bind-Value="_newEmployee.LastName" />
+            </div>
+            <div class="form-group">
+                <label for="Email">Email:</label>
+                <InputText class="form-control mx-2" type="email" required id="Email" @bind-Value="_newEmployee.Email" />
+            </div>
+            <div class="form-group">
+                <label for="Department">Department:</label>
+                <select required class="form-control mx-2" id="Department" @bind="_newEmployee.Department">
+                    <option></option>
+                    @foreach (var dep in _departments)
+                    {
+                        <option value="@dep.Name">@dep.Name</option>
+                    }
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Add</button>
+        </EditForm>
+    </Body>
+    <Footer>
+        <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="() => _addModal.Close()">Close</button>
+    </Footer>
+</Modal>
+
+}
+
+
+@code {
+    private List<Department> _departments = new List<Department>();
+    private List<Models.Employee> _employees = new List<Models.Employee>();
+    private Models.EmployeeModel _newEmployee = new Models.EmployeeModel();
+    private Models.EmployeeModel _editEmployee = new Models.EmployeeModel();
+    private Modal _addModal { get; set; }
+    private Modal _editModal { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Get();
+    }
+
+    private async Task Get()
+    {
+        _employees = new List<Models.Employee>();
+        _employees = await EmployeeService.GetAll();
+        _departments = new List<Department>();
+        _departments = await DepartmentService.GetAll();
+    }
+
+    private async Task Add()
+    {
+        var result = await EmployeeService.Add(_newEmployee);
+        _newEmployee = new EmployeeModel();
+        if (result)
+        {
+            await Get();
+            _addModal.Close();
+            ToastService.ShowSuccess("Employee added!");
+        }
+        else
+        {
+            _addModal.Close();
+            ToastService.ShowError("Employee cannot be added!");
+        }
+
+    }
+
+    private async Task Delete(long id)
+    {
+        var result = await EmployeeService.Delete(id);
+        if (result)
+        {
+            _employees = _employees.Where(x => x.Id != id).ToList();
+            await Get();
+            ToastService.ShowSuccess("Employee deleted!");
+        }
+        else
+        {
+            ToastService.ShowError("Employee cannot be deleted!");
+        }
+
+    }
+
+    private void PrepareEdit(long id)
+    {
+        var result = _employees.Single(x => x.Id == id);
+        _editEmployee = new EmployeeModel()
+        {
+            Email = result.Email,
+            Department = result.Department.Name,
+            FirstName = result.FirstName,
+            LastName = result.LastName,
+            Id = result.Id
+        };
+        _editModal.Open();
+    }
+
+    private async Task Edit()
+    {
+        var result = await EmployeeService.Edit(_editEmployee);
+        _editEmployee = new Models.EmployeeModel();
+        if (result)
+        {
+            await Get();
+            _editModal.Close();
+            ToastService.ShowSuccess("Success!");
+        }
+        else
+        {
+            _editModal.Close();
+            ToastService.ShowError("Fail to update employee!");
+        }
+
+    }
+}
