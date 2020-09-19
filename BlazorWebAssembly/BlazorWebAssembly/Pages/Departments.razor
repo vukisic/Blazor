@@ -1,0 +1,97 @@
+﻿@page "/departments"
+@inject HttpClient Http
+@inject BlazorWebAssembly.Services.IDepartmentService DepartmentService
+<h3>Departments</h3>
+
+@if (_departments == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+                <th>Main Location</th>
+                <th>Options</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var department in _departments)
+            {
+                <tr>
+                    <td>@department.Id</td>
+                    <td>@department.Name</td>
+                    <td>@department.MainLocation</td>
+                    <td>
+                        <button class="btn btn-danger" @onclick="() => Delete(department.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <button class="btn btn-primary" @onclick="() => _addModal.Open()">Add</button>
+    <Modal @ref="_addModal">
+        <Title>Add Department</Title>
+        <Body>
+            <EditForm class="form my-2" Model="@_newDepartment" OnValidSubmit="Add">
+                <div class="form-group">
+                    <label for="name">Name:</label>
+                    <InputText class="form-control mx-2" required id="name" @bind-Value="_newDepartment.Name" />
+                </div>
+                <div class="form-group">
+                    <label for="name">Main Location:</label>
+                    <InputText class="form-control mx-2 " required id="mainLocation" @bind-Value="_newDepartment.MainLocation" />
+                </div>
+                <button type="submit" class="btn btn-primary">Add Task</button>
+            </EditForm>
+        </Body>
+        <Footer>
+            <button type="button" class="btn btn-danger" data-dismiss="modal" @onclick="() => _addModal.Close()">Close</button>
+        </Footer>
+    </Modal>
+
+}
+
+
+@code {
+    private List<Department> _departments;
+    private Department _newDepartment = new Department();
+    private Modal _addModal { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Get();
+    }
+
+    private async Task Get()
+    {
+        _departments = new List<Department>();
+        _departments = await DepartmentService.GetAll();
+    }
+
+    private async void Add()
+    {
+        var result = await DepartmentService.Add(_newDepartment);
+        _newDepartment = new Department();
+        if (result)
+        {
+            _addModal.Close();
+            await Get();
+        }
+
+    }
+
+    private async Task Delete(long id)
+    {
+        var result = await DepartmentService.Delete(id);
+        if (result)
+        {
+            _departments = _departments.Where(x => x.Id != id).ToList();
+            await Get();
+        }
+
+    }
+}
